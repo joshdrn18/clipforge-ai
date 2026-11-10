@@ -119,16 +119,55 @@ document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click'
 }));
 $('#create-job').addEventListener('click', async () => {
   const f = state.selectedFile; if (!f) return;
-  const btn = $('#create-job'); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Creating job…';
+  const btn = $('#create-job');
+  let uploadInfo = null;
+  btn.disabled = true;
+  const setProgress = (message) => { $('#form-note').textContent = message; btn.innerHTML = '<span class="spinner"></span> ' + message; };
   try {
+    setProgress('Creating job…');
     const response = await fetch('/api/jobs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source_name:f.name,source_size:f.size,processing_mode:state.mode,settings:{aspect_ratio:'9:16'}}) });
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error || 'Could not create job');
-    $('#form-note').textContent = 'Job record created. Connect a processing agent and upload the source file to begin rendering.';
+    const jobId = data.job.id;
+
+    setProgress('Preparing secure video upload…');
+    const initResponse = await fetch('/api/uploads/init', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({job_id:jobId,file_name:f.name,file_size:f.size,content_type:f.type || 'application/octet-stream'}) });
+    uploadInfo = await initResponse.json();
+    if (!initResponse.ok || !uploadInfo.ok) throw new Error(uploadInfo.error || 'Could not initialize upload');
+
+    const chunkSize = uploadInfo.part_size || (16 * 1024 * 1024);
+    const totalParts = Math.ceil(f.size / chunkSize);
+    const parts = [];
+    for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+      const start = (partNumber - 1) * chunkSize;
+      const end = Math.min(start + chunkSize, f.size);
+      setProgress('Uploading video ' + Math.round((end / f.size) * 100) + '%…');
+      const partResponse = await fetch('/api/uploads/part?upload_id=' + encodeURIComponent(uploadInfo.upload_id) + '&key=' + encodeURIComponent(uploadInfo.key) + '&part_number=' + partNumber, {
+        method:'POST', headers:{'Content-Type':'application/octet-stream'}, body:f.slice(start, end)
+      });
+      const partData = await partResponse.json();
+      if (!partResponse.ok || !partData.ok) throw new Error(partData.error || 'Upload failed at part ' + partNumber);
+      parts.push({part_number:partNumber, etag:partData.etag});
+    }
+
+    setProgress('Finalizing upload…');
+    const completeResponse = await fetch('/api/uploads/complete', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({job_id:jobId,upload_id:uploadInfo.upload_id,key:uploadInfo.key,parts}) });
+    const completeData = await completeResponse.json();
+    if (!completeResponse.ok || !completeData.ok) throw new Error(completeData.error || 'Could not finalize video upload');
+
+    $('#form-note').textContent = 'Video uploaded successfully. The job is queued and waiting for a connected processing agent.';
     fileInput.value = ''; state.selectedFile = null; $('#file-selected').hidden = true;
     await refresh();
-  } catch (e) { $('#form-note').textContent = e.message; }
-  finally { btn.disabled = !state.selectedFile; btn.innerHTML = '<span>✦</span> Prepare clipping job <span class="button-arrow">→</span>'; }
+  } catch (e) {
+    if (uploadInfo?.upload_id && uploadInfo?.key) {
+      fetch('/api/uploads/abort', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({upload_id:uploadInfo.upload_id,key:uploadInfo.key}) }).catch(() => {});
+    }
+    $('#form-note').textContent = 'Upload did not finish: ' + e.message + '. You can retry the upload.';
+    await refresh();
+  } finally {
+    btn.disabled = !state.selectedFile;
+    btn.innerHTML = '<span>✦</span> Prepare clipping job <span class="button-arrow">→</span>';
+  }
 });
 refresh();
 setInterval(refresh, 12000);
