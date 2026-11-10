@@ -1,3 +1,3 @@
 requests>=2.32.3,<3
 python-dotenv>=1.0.1,<2
-autoclip @ https://github.com/artbyjazi/autoclip/archive/refs/heads/main.zip
+autoclip @ https://github.com/artbyjazi/autoclip/archive/5d0eac36fa615b79dd2104083bf273a96f8d68bb.zip
