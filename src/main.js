@@ -101,7 +101,49 @@ function renderJobs() {
     root.innerHTML = '<div class="empty-state"><div class="empty-icon">▤</div><b>Your next great clip starts here</b><span>Jobs you create will appear in this queue.</span></div>';
     return;
   }
-  root.innerHTML = state.jobs.map(j => `<div class="job-row"><div class="job-thumb">▶</div><div class="job-details"><b>${escapeHtml(j.source_name)}</b><small>${fmtBytes(j.source_size || 0)} · ${fmtDuration(j.duration_seconds)} · ${escapeHtml(j.processing_mode || 'auto').toUpperCase()}</small></div><div class="job-progress"><span>${escapeHtml(j.stage || j.status)}</span><div><i style="width:${Math.max(0,Math.min(100,j.progress || 0))}%"></i></div></div><span class="job-status">${escapeHtml(j.status)}</span></div>`).join('');
+  root.innerHTML = state.jobs.map(j => {
+    const actions = j.status === 'failed'
+      ? `<div class="job-actions"><button class="job-action retry" data-job-action="retry" data-job-id="${escapeHtml(j.id)}">↻ Retry</button><button class="job-action delete" data-job-action="delete" data-job-id="${escapeHtml(j.id)}">Delete</button></div>`
+      : j.status === 'queued'
+        ? `<div class="job-actions"><button class="job-action cancel" data-job-action="cancel" data-job-id="${escapeHtml(j.id)}">Cancel</button></div>`
+        : j.status === 'cancelled'
+          ? `<div class="job-actions"><button class="job-action delete" data-job-action="delete" data-job-id="${escapeHtml(j.id)}">Delete</button></div>`
+          : '';
+    const error = j.error ? `<small class="job-error">${escapeHtml(j.error)}</small>` : '';
+    return `<div class="job-row">
+      <div class="job-thumb">▶</div>
+      <div class="job-details"><b>${escapeHtml(j.source_name)}</b><small>${fmtBytes(j.source_size || 0)} · ${fmtDuration(j.duration_seconds)} · ${escapeHtml(j.processing_mode || 'auto').toUpperCase()}</small>${error}</div>
+      <div class="job-progress"><span>${escapeHtml(j.stage || j.status)}</span><div><i style="width:${Math.max(0,Math.min(100,j.progress || 0))}%"></i></div></div>
+      <span class="job-status status-${escapeHtml(j.status)}">${escapeHtml(j.status)}</span>
+      ${actions}
+    </div>`;
+  }).join('');
+  root.querySelectorAll('[data-job-action]').forEach(button => {
+    button.addEventListener('click', () => handleJobAction(button.dataset.jobId, button.dataset.jobAction, button));
+  });
+}
+async function handleJobAction(jobId, action, button) {
+  const prompts = {
+    retry: 'Retry this failed job? The existing partial clips will be cleared and the original source will be processed again.',
+    cancel: 'Cancel this queued job? It has not started processing yet.',
+    delete: 'Permanently delete this job and its stored source/output files?'
+  };
+  if (!window.confirm(prompts[action] || 'Continue?')) return;
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = action === 'retry' ? 'Retrying…' : action === 'cancel' ? 'Cancelling…' : 'Deleting…';
+  try {
+    const response = await fetch('/api/jobs/' + encodeURIComponent(jobId), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.error || 'Job action failed');
+    await refresh();
+  } catch (error) {
+    window.alert(error.message);
+    button.disabled = false;
+    button.textContent = original;
+  }
 }
 function renderAssets() {
   const root = $('#assets-list');
