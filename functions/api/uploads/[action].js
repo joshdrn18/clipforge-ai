@@ -54,7 +54,30 @@ export async function onRequest({ request, env, params }) {
       if (!updated.meta?.changes) return json({ ok: false, error: "Upload finished but the job record could not be updated." }, 409);
       await env.DB.prepare("INSERT INTO job_events (job_id, level, message, created_at) VALUES (?, 'info', ?, ?)")
         .bind(jobId, "Source uploaded successfully (" + object.size + " bytes). Waiting for a processing agent.", now).run();
-      return json({ ok: true, job_id: jobId, source_size: object.size, status: "queued" });
+
+      let dispatch = { configured: !!env.MODAL_DISPATCH_URL, accepted: false };
+      if (env.MODAL_DISPATCH_URL && env.MODAL_DISPATCH_SECRET) {
+        try {
+          const response = await fetch(env.MODAL_DISPATCH_URL, {
+            method: "POST",
+            headers: {
+              "Authorization": "Bearer " + env.MODAL_DISPATCH_SECRET,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ job_id: jobId })
+          });
+          dispatch.accepted = response.ok;
+          const message = response.ok
+            ? "Job dispatched to the serverless cloud renderer."
+            : "Cloud renderer dispatch was rejected (HTTP " + response.status + "). Job remains queued.";
+          await env.DB.prepare("INSERT INTO job_events (job_id, level, message, created_at) VALUES (?, ?, ?, ?)")
+            .bind(jobId, response.ok ? "info" : "warning", message, new Date().toISOString()).run();
+        } catch (dispatchError) {
+          await env.DB.prepare("INSERT INTO job_events (job_id, level, message, created_at) VALUES (?, 'warning', ?, ?)")
+            .bind(jobId, "Cloud renderer could not be reached. Job remains queued for retry.", new Date().toISOString()).run();
+        }
+      }
+      return json({ ok: true, job_id: jobId, source_size: object.size, status: "queued" , dispatch });
     }
 
     if (action === "abort") {
