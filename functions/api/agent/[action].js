@@ -71,7 +71,7 @@ export async function onRequest({ request, env, params }) {
         .bind(agentId, timestamp, agent.mode, agent.mode, localCutoff).first();
       if (!result) return json({ ok: true, job: null });
       await env.DB.prepare("INSERT INTO job_events (job_id, level, message, created_at) VALUES (?, 'info', ?, ?)")
-        .bind(result.id, `Job claimed by ${agent.mode} agent ${agentId}.`, timestamp).run();
+        .bind(result.id, `Cloud worker ${agentId} claimed this job.`, timestamp).run();
       return json({ ok: true, job: result });
     }
 
