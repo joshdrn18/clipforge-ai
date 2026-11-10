@@ -4,6 +4,7 @@
 The agent connects outbound, claims jobs only when AutoClip and FFmpeg are installed,
 runs the upstream AutoClip pipeline locally, and streams finished clips back to R2.
 """
+import json
 import os
 import platform
 import re
@@ -147,7 +148,14 @@ def run_autoclip(job, source_path):
     exports.mkdir(parents=True, exist_ok=True)
     before = {p.resolve() for p in exports.rglob("*.mp4")}
     started = time.time()
-    command = ["autoclip", "clip", str(source_path), "--ratio", "9:16", "--max-clips", str(MAX_CLIPS)]
+    try:
+        settings = json.loads(job.get("settings_json") or "{}")
+    except (TypeError, json.JSONDecodeError):
+        settings = {}
+    ratio = str(settings.get("aspect_ratio") or "9:16")
+    if ratio not in ("9:16", "16:9", "1:1"):
+        ratio = "9:16"
+    command = ["autoclip", "clip", str(source_path), "--ratio", ratio, "--max-clips", str(MAX_CLIPS)]
     print("Running:", " ".join(command))
     result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if result.returncode != 0:
