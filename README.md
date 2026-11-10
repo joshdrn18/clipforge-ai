@@ -27,7 +27,8 @@ Cloudflare Workers are the control plane, not the video-rendering runtime. Heavy
 - [x] Local agent can claim jobs when AutoClip doctor passes
 - [x] Local agent runs AutoClip and uploads rendered MP4 assets to R2
 - [ ] Dashboard clip library playback and downloads
-- [ ] Cloud worker provisioning and lifecycle management
+- [x] Docker image and Compose template for a dedicated cloud agent
+- [ ] Cloud server provisioning and lifecycle management
 - [ ] Workspace authentication and per-user authorization
 
 **Important:** the local rendering path is wired to AutoClip, but has not yet been end-to-end tested on your computer with a real source video and configured AI provider. The cloud agent still needs a separately provisioned server. Do not expose this unfinished workspace publicly with valuable/private media until authentication and authorization are implemented.
