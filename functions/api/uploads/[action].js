@@ -49,8 +49,9 @@ export async function onRequest({ request, env, params }) {
       const upload = env.MEDIA.resumeMultipartUpload(key, uploadId);
       const object = await upload.complete(normalized);
       const now = new Date().toISOString();
-      await env.DB.prepare("UPDATE jobs SET status='queued', progress=0, stage='waiting_for_agent', updated_at=? WHERE id=? AND source_key=?")
+      const updated = await env.DB.prepare("UPDATE jobs SET status='queued', progress=0, stage='waiting_for_agent', updated_at=? WHERE id=? AND source_key=?")
         .bind(now, jobId, key).run();
+      if (!updated.meta?.changes) return json({ ok: false, error: "Upload finished but the job record could not be updated." }, 409);
       await env.DB.prepare("INSERT INTO job_events (job_id, level, message, created_at) VALUES (?, 'info', ?, ?)")
         .bind(jobId, "Source uploaded successfully (" + object.size + " bytes). Waiting for a processing agent.", now).run();
       return json({ ok: true, job_id: jobId, source_size: object.size, status: "queued" });
@@ -62,6 +63,12 @@ export async function onRequest({ request, env, params }) {
       const uploadId = String(body.upload_id || "");
       if (!key.startsWith("sources/") || !uploadId) return json({ ok: false, error: "Invalid abort request." }, 400);
       await env.MEDIA.resumeMultipartUpload(key, uploadId).abort();
+      const jobId = key.split("/")[1] || "";
+      if (jobId) {
+        const now = new Date().toISOString();
+        await env.DB.prepare("UPDATE jobs SET status='failed', stage='upload_aborted', error='Source upload was cancelled or interrupted.', updated_at=? WHERE id=? AND status='uploading'")
+          .bind(now, jobId).run();
+      }
       return json({ ok: true });
     }
 
