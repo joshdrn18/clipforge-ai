@@ -78,7 +78,6 @@ async function refresh() {
     $('#queue-count').textContent = state.jobs.filter(j => ['queued','processing'].includes(j.status)).length;
     $('#metric-agents').textContent = state.agents.filter(a => a.status === 'online').length;
     $('#agent-status').textContent = state.agents.some(a => a.mode === 'cloud' && a.status === 'online') ? 'CONNECTED' : 'NOT DEPLOYED';
-    const localAgent = null;
     const cloudAgent = state.agents.find(a => a.mode === 'cloud' && a.status === 'online');
     const isPipelineReady = agent => {
       try { return JSON.parse(agent?.capabilities_json || '{}').pipeline_ready === true; }
