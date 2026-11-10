@@ -43,6 +43,24 @@ if errorlevel 1 (
 )
 
 :install
+where ffmpeg >nul 2>nul
+if errorlevel 1 (
+  echo Full FFmpeg is required by the video renderer.
+  where winget >nul 2>nul
+  if errorlevel 1 (
+    echo Windows Package Manager was not found.
+    echo Install the full Gyan FFmpeg build from https://www.gyan.dev/ffmpeg/builds/
+    pause
+    exit /b 1
+  )
+  echo Installing the full Gyan FFmpeg build...
+  winget install --id Gyan.FFmpeg -e --accept-package-agreements --accept-source-agreements
+  echo.
+  echo Close this window and double-click START-CLIPFORGE.bat again so Windows refreshes PATH.
+  pause
+  exit /b 0
+)
+
 echo [1/3] Preparing Python environment...
 ".venv\Scripts\python.exe" -m pip install --upgrade pip
 if errorlevel 1 (
