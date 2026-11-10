@@ -1,3 +1,6 @@
 requests>=2.32.3,<3
 python-dotenv>=1.0.1,<2
 autoclip @ https://github.com/artbyjazi/autoclip/archive/5d0eac36fa615b79dd2104083bf273a96f8d68bb.zip
+# 0.10.18 is the last MediaPipe release in this dependency range with
+# official Linux aarch64 wheels; newer 0.10.20/0.10.21 dropped them.
+mediapipe==0.10.18
