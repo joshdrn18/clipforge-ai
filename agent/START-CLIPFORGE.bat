@@ -22,11 +22,29 @@ goto install
 :create_venv
 where py >nul 2>nul
 if errorlevel 1 (
-  echo Python Launcher (py) was not found.
-  echo Install Python 3.12 or 3.11 from https://www.python.org/downloads/
-  echo Keep the Python Launcher option enabled during setup.
+  echo Python 3.12 is not installed. Checking Windows Package Manager...
+  where winget >nul 2>nul
+  if errorlevel 1 (
+    echo.
+    echo Automatic installation is unavailable because winget was not found.
+    echo Install Python 3.12 from https://www.python.org/downloads/
+    echo Enable "Add python.exe to PATH" and "Python Launcher" during setup.
+    pause
+    exit /b 1
+  )
+  echo Installing Python 3.12 automatically...
+  winget install --id Python.Python.3.12 -e --accept-package-agreements --accept-source-agreements
+  if errorlevel 1 (
+    echo.
+    echo Automatic Python installation failed. Install Python 3.12 from https://www.python.org/downloads/
+    pause
+    exit /b 1
+  )
+  echo.
+  echo Python 3.12 was installed. Close this window and run START-CLIPFORGE.bat again.
+  echo Windows needs a fresh window to refresh the Python Launcher PATH.
   pause
-  exit /b 1
+  exit /b 0
 )
 echo Checking for Python 3.12...
 py -3.12 -m venv .venv
