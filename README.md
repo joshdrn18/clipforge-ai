@@ -24,12 +24,13 @@ Cloudflare Workers are the control plane, not the video-rendering runtime. Heavy
 - [x] Local/cloud/auto agent registration and heartbeat API
 - [x] R2 multipart source upload in 32 MiB chunks
 - [x] Authenticated agent source-download endpoint
-- [ ] End-to-end AutoClip pipeline execution from the agent
-- [ ] Generated clip upload and library playback
+- [x] Local agent can claim jobs when AutoClip doctor passes
+- [x] Local agent runs AutoClip and uploads rendered MP4 assets to R2
+- [ ] Dashboard clip library playback and downloads
 - [ ] Cloud worker provisioning and lifecycle management
 - [ ] Workspace authentication and per-user authorization
 
-**Important:** source uploads can be stored, but a job is not rendered yet. The current agent reports its presence only and does not claim jobs until the actual renderer is installed. Do not expose this unfinished workspace publicly with valuable/private media until authentication and authorization are implemented.
+**Important:** the local rendering path is wired to AutoClip, but has not yet been end-to-end tested on your computer with a real source video and configured AI provider. The cloud agent still needs a separately provisioned server. Do not expose this unfinished workspace publicly with valuable/private media until authentication and authorization are implemented.
 
 ## Local development
 
