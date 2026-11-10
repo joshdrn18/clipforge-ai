@@ -4,6 +4,7 @@
 The agent connects outbound, claims jobs only when AutoClip and FFmpeg are installed,
 runs the upstream AutoClip pipeline locally, and streams finished clips back to R2.
 """
+import argparse
 import json
 import os
 import platform
@@ -48,7 +49,11 @@ SESSION.headers.update({"Authorization": f"Bearer {SECRET}"})
 
 def call(action, payload=None, method="POST", stream=False):
     response = SESSION.request(method, f"{BASE_URL}/api/agent/{action}", json=payload if method == "POST" else None, timeout=(20, 180), stream=stream)
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as exc:
+        detail = response.text[:1200] if not stream else "stream request failed"
+        raise RuntimeError(f"{action} request failed (HTTP {response.status_code}): {detail}") from exc
     if stream:
         return response
     data = response.json()
@@ -208,8 +213,21 @@ def process_job(job):
     call("complete", {"agent_id": ID, "job_id": job_id})
 
 def main():
+    parser = argparse.ArgumentParser(description="ClipForge processing agent")
+    parser.add_argument("--check", action="store_true", help="test API authentication and agent registration, then exit")
+    args = parser.parse_args()
+
     caps = capabilities()
     call("register", {"agent_id": ID, "label": LABEL, "mode": MODE, "capabilities": caps})
+    if args.check:
+        call("heartbeat", {"agent_id": ID, "capabilities": caps})
+        print(f"API connection: OK ({BASE_URL})")
+        print(f"Agent registration: OK ({LABEL}, {MODE})")
+        print(f"Renderer readiness: {'READY' if caps['pipeline_ready'] else 'NOT READY'}")
+        if _RENDERER_DIAGNOSTIC:
+            print(_RENDERER_DIAGNOSTIC)
+        return
+
     print(f"ClipForge agent connected: {LABEL} ({MODE})")
     if not caps["pipeline_ready"]:
         print("Agent is online, but rendering is disabled until AutoClip, full FFmpeg, and an AI provider pass 'autoclip doctor'.")
