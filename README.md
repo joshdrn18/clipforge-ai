@@ -33,3 +33,5 @@ The ClipForge AI control-plane code is MIT. AutoClip is a separate upstream proj
 
 
 <!-- Pages CI trigger: source control connected; deployments build from main. -->
+
+<!-- Trigger Pages deployment after repository path filter reset. -->
