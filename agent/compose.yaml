@@ -1,0 +1,16 @@
+services:
+  clipforge-cloud-agent:
+    build: .
+    container_name: clipforge-cloud-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      CLIPFORGE_AGENT_MODE: cloud
+      CLIPFORGE_AGENT_LABEL: Cloud Worker
+      AUTOCLIP_HOME: /data/autoclip
+    volumes:
+      - autoclip-data:/data/autoclip
+
+volumes:
+  autoclip-data:
