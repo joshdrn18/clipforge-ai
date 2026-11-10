@@ -17,7 +17,7 @@ document.querySelector('#app').innerHTML = `
       <a class="nav-item" href="#outputs"><span class="nav-icon">▤</span> Clip library</a>
     </nav>
     <div class="sidebar-bottom">
-      <div class="storage-card"><div class="storage-icon">◈</div><div><b>Private by design</b><small>Choose where videos are processed.</small></div></div>
+      <div class="storage-card"><div class="storage-icon">◈</div><div><b>Local-first compute</b><small>Choose where heavy processing runs.</small></div></div>
       <div class="profile"><div class="avatar">CF</div><div><b>My workspace</b><small>Personal instance</small></div><span class="dots">···</span></div>
     </div>
   </aside>
