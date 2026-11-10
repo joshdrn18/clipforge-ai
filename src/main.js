@@ -1,6 +1,6 @@
 import './style.css';
 
-const state = { mode: 'auto', aspectRatio: '9:16', jobs: [], agents: [], assets: [], selectedFile: null, apiOnline: false };
+const state = { mode: 'cloud', aspectRatio: '9:16', jobs: [], agents: [], assets: [], selectedFile: null, apiOnline: false };
 const $ = (s) => document.querySelector(s);
 const fmtBytes = (n) => n < 1024 * 1024 ? (n / 1024).toFixed(0) + ' KB' : (n / 1024 / 1024).toFixed(1) + ' MB';
 const fmtDuration = (s) => s ? Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0') : '—';
@@ -13,40 +13,40 @@ document.querySelector('#app').innerHTML = `
     <nav>
       <a class="nav-item active" href="#"><span class="nav-icon">▦</span> Overview</a>
       <a class="nav-item" href="#queue"><span class="nav-icon">◷</span> Processing queue <span class="nav-count" id="queue-count">0</span></a>
-      <a class="nav-item" href="#agents"><span class="nav-icon">⌘</span> Processing agents</a>
+      <a class="nav-item" href="#agents"><span class="nav-icon">☁</span> Cloud renderer</a>
       <a class="nav-item" href="#outputs"><span class="nav-icon">▤</span> Clip library</a>
     </nav>
     <div class="sidebar-bottom">
-      <div class="storage-card"><div class="storage-icon">◈</div><div><b>Local-first compute</b><small>Choose where heavy processing runs.</small></div></div>
+      <div class="storage-card"><div class="storage-icon">☁</div><div><b>Cloud-only compute</b><small>Your laptop never renders videos.</small></div></div>
       <div class="profile"><div class="avatar">CF</div><div><b>My workspace</b><small>Personal instance</small></div><span class="dots">···</span></div>
     </div>
   </aside>
   <main class="main">
     <header class="topbar"><div class="crumb">Workspace <span>/</span> Overview</div><div class="top-actions"><span class="system-status"><i id="api-dot"></i><span id="api-label">Checking system</span></span><button class="icon-button" title="Notifications">♧</button><div class="avatar small">CF</div></div></header>
-    <section class="welcome"><div><div class="eyebrow"><span class="spark">✦</span> AI VIDEO WORKSPACE</div><h1>Make every moment<br><em>worth watching.</em></h1><p>Turn long videos into scroll-stopping clips. Process privately on your own machine or scale with a cloud worker.</p></div><div class="welcome-art"><div class="art-ring ring-one"></div><div class="art-ring ring-two"></div><div class="play-tile">▶</div><span class="art-tag tag-top">AI HIGHLIGHTS</span><span class="art-tag tag-bottom">9:16 READY</span></div></section>
+    <section class="welcome"><div><div class="eyebrow"><span class="spark">✦</span> AI VIDEO WORKSPACE</div><h1>Make every moment<br><em>worth watching.</em></h1><p>Turn long videos into scroll-stopping clips. All AI analysis and rendering run on a separate cloud server.</p></div><div class="welcome-art"><div class="art-ring ring-one"></div><div class="art-ring ring-two"></div><div class="play-tile">▶</div><span class="art-tag tag-top">AI HIGHLIGHTS</span><span class="art-tag tag-bottom">9:16 READY</span></div></section>
     <section class="metrics">
       <div class="metric"><span class="metric-label">TOTAL JOBS</span><strong id="metric-jobs">0</strong><small>Across this workspace</small></div>
       <div class="metric"><span class="metric-label">IN QUEUE</span><strong id="metric-queue">0</strong><small>Waiting to be processed</small></div>
-      <div class="metric"><span class="metric-label">CONNECTED AGENTS</span><strong id="metric-agents">0</strong><small>Local + cloud workers</small></div>
-      <div class="metric accent-metric"><span class="metric-label">PROCESSING MODE</span><strong id="metric-mode">AUTO</strong><small>Smart agent selection</small></div>
+      <div class="metric"><span class="metric-label">CLOUD WORKERS</span><strong id="metric-agents">0</strong><small>Local + cloud workers</small></div>
+      <div class="metric accent-metric"><span class="metric-label">PROCESSING MODE</span><strong id="metric-mode">CLOUD</strong><small>Remote server only</small></div>
     </section>
     <section class="content-grid">
       <div class="panel upload-panel">
         <div class="panel-heading"><div><span class="step-label">01 / NEW PROJECT</span><h2>Start with a video</h2><p>Upload a source file to prepare a clipping job.</p></div><span class="panel-symbol">↗</span></div>
         <label class="dropzone" id="dropzone" for="file-input"><input id="file-input" type="file" accept="video/*,.mp4,.mov,.mkv,.webm" /><span class="upload-symbol">↑</span><b>Drop your video here</b><span>or <u>browse files</u> from your device</span><small>MP4, MOV, MKV, WEBM · Duration limited by available processing capacity</small></label>
         <div class="file-selected" id="file-selected" hidden></div>
-        <div class="field-row"><label>PROCESSING MODE</label><div class="mode-select" role="group"><button data-mode="auto" class="mode-option selected">Auto <small>Recommended</small></button><button data-mode="local" class="mode-option">Local <small>Your device</small></button><button data-mode="cloud" class="mode-option">Cloud <small>Remote server</small></button></div></div>
+        <div class="cloud-only-note"><b>☁ Cloud rendering only</b><span>Your video uploads to secure cloud storage. A remote server handles AI clipping and FFmpeg rendering. Nothing is installed or rendered on this laptop.</span></div>
         <div class="field-row"><label>CLIP FORMAT</label><div class="format-pills"><button type="button" data-ratio="9:16" class="format-pill active">▯ 9:16 Vertical</button><button type="button" data-ratio="16:9" class="format-pill">▭ 16:9</button><button type="button" data-ratio="1:1" class="format-pill">□ 1:1</button></div></div>
         <button class="primary-button" id="create-job" disabled><span>✦</span> Prepare clipping job <span class="button-arrow">→</span></button>
         <p class="form-note" id="form-note">Choose a video to continue. Rendering requires a connected local or cloud agent.</p>
       </div>
       <div class="right-column">
         <div class="panel agent-panel" id="agents"><div class="panel-heading compact"><div><span class="step-label">02 / COMPUTE</span><h2>Processing agents</h2></div><span class="status-chip" id="agent-status">SCANNING</span></div>
-          <div class="agent-row"><div class="agent-icon local-icon">⌂</div><div class="agent-info"><b>Local processing</b><small>Run on your own computer</small></div><span class="agent-state offline" id="local-state">Offline</span></div>
-          <div class="agent-row"><div class="agent-icon cloud-icon">☁</div><div class="agent-info"><b>Cloud processing</b><small>Dedicated remote compute</small></div><span class="agent-state offline" id="cloud-state">Not configured</span></div>
-          <div class="agent-footer"><span>Agent connection is outbound-only</span><a href="#setup">Setup guide ↗</a></div>
+          
+          <div class="agent-row"><div class="agent-icon cloud-icon">☁</div><div class="agent-info"><b>Remote cloud renderer</b><small>Dedicated server · isolated from your laptop</small></div><span class="agent-state offline" id="cloud-state">Not deployed</span></div>
+          <div class="agent-footer"><span>Secure outbound connection from cloud server</span><a href="#setup">Cloud setup ↗</a></div>
         </div>
-        <div class="tip-card"><span class="tip-icon">✳</span><div><b>One workspace. Two ways to process.</b><p>Use local compute for privacy and zero server fees. Add a cloud worker when you need longer or parallel jobs.</p></div></div>
+        <div class="tip-card"><span class="tip-icon">✳</span><div><b>Your laptop stays out of the render process.</b><p>Keep this tab open or closed; once uploaded, the cloud worker processes the job independently.</p></div></div>
       </div>
     </section>
     <section class="panel queue-panel" id="queue"><div class="panel-heading compact"><div><span class="step-label">03 / ACTIVITY</span><h2>Recent jobs</h2></div><a href="#queue" class="text-link">View all <span>→</span></a></div><div id="jobs-list" class="jobs-list"><div class="empty-state"><div class="empty-icon">▤</div><b>Your next great clip starts here</b><span>Jobs you create will appear in this queue.</span></div></div></section>
@@ -54,7 +54,7 @@ document.querySelector('#app').innerHTML = `
       <div class="panel-heading compact"><div><span class="step-label">04 / EXPORTS</span><h2>Clip library</h2><p>Rendered clips saved from your processing jobs.</p></div><span class="status-chip" id="library-count">0 CLIPS</span></div>
       <div id="assets-list" class="assets-grid"><div class="empty-state"><div class="empty-icon">▤</div><b>Your finished clips will appear here</b><span>Once an agent renders a job, preview and download the MP4 here.</span></div></div>
     </section>
-    <section class="setup-strip" id="setup"><div><span class="step-label">NEXT STEP</span><b>Connect your first processing agent</b><p>The web workspace is ready. Install the local agent or configure a remote worker to start rendering.</p></div><a href="https://github.com/artbyjazi/autoclip" target="_blank" rel="noreferrer">Explore AutoClip engine ↗</a></section>
+    <section class="setup-strip" id="setup"><div><span class="step-label">CLOUD DEPLOYMENT</span><b>Deploy the remote rendering server</b><p>The dashboard and storage are hosted. A separate cloud compute server must be deployed and connected before jobs can render.</p></div><a href="https://github.com/joshdrn18/clipforge-ai/tree/main/agent" target="_blank" rel="noreferrer">Cloud worker files ↗</a></section>
     <footer>CLIPFORGE AI <span>·</span> Built for creators who make more with less.</footer>
   </main>
 </div>`;
@@ -77,16 +77,16 @@ async function refresh() {
     $('#metric-queue').textContent = state.jobs.filter(j => ['queued','processing'].includes(j.status)).length;
     $('#queue-count').textContent = state.jobs.filter(j => ['queued','processing'].includes(j.status)).length;
     $('#metric-agents').textContent = state.agents.filter(a => a.status === 'online').length;
-    $('#agent-status').textContent = state.agents.some(a => a.status === 'online') ? 'CONNECTED' : 'NO AGENTS';
-    const localAgent = state.agents.find(a => a.mode === 'local' && a.status === 'online');
+    $('#agent-status').textContent = state.agents.some(a => a.mode === 'cloud' && a.status === 'online') ? 'CONNECTED' : 'NOT DEPLOYED';
+    const localAgent = null;
     const cloudAgent = state.agents.find(a => a.mode === 'cloud' && a.status === 'online');
     const isPipelineReady = agent => {
       try { return JSON.parse(agent?.capabilities_json || '{}').pipeline_ready === true; }
       catch { return false; }
     };
-    $('#local-state').textContent = !localAgent ? 'Offline' : (isPipelineReady(localAgent) ? 'Ready' : 'Setup required');
+    /* Local rendering is intentionally disabled. */
     $('#cloud-state').textContent = !cloudAgent ? 'Not configured' : (isPipelineReady(cloudAgent) ? 'Ready' : 'Setup required');
-    $('#local-state').className = 'agent-state ' + (localAgent && isPipelineReady(localAgent) ? 'online-state' : 'offline');
+    
     $('#cloud-state').className = 'agent-state ' + (cloudAgent && isPipelineReady(cloudAgent) ? 'online-state' : 'offline');
     renderJobs();
     renderAssets();
@@ -187,11 +187,7 @@ document.querySelectorAll('[data-ratio]').forEach(b => b.addEventListener('click
   state.aspectRatio = b.dataset.ratio;
   document.querySelectorAll('[data-ratio]').forEach(x => x.classList.toggle('active', x === b));
 }));
-document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
-  state.mode = b.dataset.mode;
-  document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('selected', x === b));
-  $('#metric-mode').textContent = state.mode.toUpperCase();
-}));
+
 $('#create-job').addEventListener('click', async () => {
   const f = state.selectedFile; if (!f) return;
   const btn = $('#create-job');
@@ -200,7 +196,7 @@ $('#create-job').addEventListener('click', async () => {
   const setProgress = (message) => { $('#form-note').textContent = message; btn.innerHTML = '<span class="spinner"></span> ' + message; };
   try {
     setProgress('Creating job…');
-    const response = await fetch('/api/jobs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source_name:f.name,source_size:f.size,processing_mode:state.mode,settings:{aspect_ratio:state.aspectRatio}}) });
+    const response = await fetch('/api/jobs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source_name:f.name,source_size:f.size,processing_mode:'cloud',settings:{aspect_ratio:state.aspectRatio}}) });
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error || 'Could not create job');
     const jobId = data.job.id;
@@ -230,7 +226,7 @@ $('#create-job').addEventListener('click', async () => {
     const completeData = await completeResponse.json();
     if (!completeResponse.ok || !completeData.ok) throw new Error(completeData.error || 'Could not finalize video upload');
 
-    $('#form-note').textContent = 'Video uploaded successfully. The job is queued and waiting for a connected processing agent.';
+    $('#form-note').textContent = 'Video uploaded successfully. The job is queued and waiting for the cloud renderer.';
     fileInput.value = ''; state.selectedFile = null; $('#file-selected').hidden = true;
     await refresh();
   } catch (e) {
