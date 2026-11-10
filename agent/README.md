@@ -1,32 +1,44 @@
-# ClipForge Local Agent (connection stage)
+# ClipForge Local Agent
 
-This lightweight Python client connects outbound to ClipForge. It does not open an inbound port and does not expose your computer to the internet.
+The Windows launcher installs the Python agent and the upstream AutoClip engine, then connects outbound to ClipForge. It does not open an inbound port.
 
 ## Requirements
-- Python 3.10+
-- Network access to your ClipForge Pages URL
 
-## Configure
-1. In Cloudflare Pages > clipforge-ai > Settings > Variables and Secrets, add the secret `AGENT_SHARED_SECRET`. Generate a long random value and keep it private.
-2. Copy `.env.example` to `.env` and set `CLIPFORGE_AGENT_SECRET` to exactly the same value.
-3. Install and run:
+- Windows 10/11
+- Python 3.11 or 3.12 (Python 3.13 is not supported by AutoClip's current reframe dependencies)
+- Full FFmpeg build with libass and libx264 (the launcher attempts to install Gyan FFmpeg with winget)
+- A working AI provider for highlight selection: Ollama locally, or an API key supported by AutoClip
 
-```bash
-python -m venv .venv
-# macOS/Linux:
-source .venv/bin/activate
-# Windows PowerShell:
-# .venv\\Scripts\\Activate.ps1
-pip install -r requirements.txt
+## Windows quick start
+
+1. Download the ClipForge repository ZIP and extract it.
+2. Open the `agent` folder.
+3. Double-click `START-CLIPFORGE.bat`.
+4. If FFmpeg is installed during the first run, close the window and double-click the launcher again.
+5. On first run, Notepad opens `.env`. Set `CLIPFORGE_AGENT_SECRET` to the same rotated secret as Cloudflare's `AGENT_SHARED_SECRET`. Do not use a secret that has been shared in chat or committed to GitHub.
+6. Keep the launcher window open while the computer is processing.
+
+The launcher installs AutoClip from its upstream GitHub source through `requirements.txt`. This downloads sizeable Python/AI dependencies and may take several minutes.
+
+## Configure AI highlight selection
+
+AutoClip requires an available LLM provider for highlight ranking. A provider can be configured with the AutoClip CLI, for example:
+
+```text
+autoclip config set-secret openai
 ```
 
-Set the variables from `.env` in your terminal, then run:
+The CLI securely prompts for the key. Other supported providers and a fully local Ollama option are documented in the [AutoClip README](https://github.com/artbyjazi/autoclip).
 
-```bash
-python agent.py
-```
+Run `autoclip doctor` to verify Python, FFmpeg, dependencies, and provider readiness. Until the doctor check passes, the agent can appear online but will not claim rendering jobs.
 
-The dashboard should show this machine as online after the next refresh.
+## What the agent does
 
-## Current scope
-This release implements authenticated registration and heartbeat only. It intentionally does not claim or render jobs yet. The browser upload path and the actual AutoClip/FFmpeg execution pipeline are separate steps; the agent will not mark a job complete without producing a real output.
+1. Registers and heartbeats to ClipForge over HTTPS.
+2. Claims a queued job only when the local AutoClip pipeline passes its readiness check.
+3. Downloads the source video from private R2 storage.
+4. Runs AutoClip locally to transcribe, select highlights, reframe to 9:16, and export captioned clips.
+5. Uploads each rendered MP4 to R2 in multipart chunks.
+6. Reports job progress and completion to the dashboard.
+
+The cloud control plane does not render videos. Cloud processing requires a separate machine/container running the same agent in cloud mode. Clip selection quality depends on the configured model and the source content.
