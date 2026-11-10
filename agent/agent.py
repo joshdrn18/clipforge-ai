@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""ClipForge outbound agent client. This client registers and heartbeats only.
-It deliberately does not claim jobs until a real rendering pipeline is installed.
-"""
-import json
+"""ClipForge outbound agent client. Registers and heartbeats only; no fake rendering."""
 import os
 import platform
 import socket
@@ -11,7 +8,9 @@ import uuid
 from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
 
+load_dotenv(Path(__file__).with_name(".env"))
 BASE_URL = os.environ.get("CLIPFORGE_API_URL", "https://clipforge-ai-2c2.pages.dev").rstrip("/")
 SECRET = os.environ.get("CLIPFORGE_AGENT_SECRET", "")
 AGENT_ID_FILE = Path.home() / ".clipforge-agent-id"
@@ -20,7 +19,7 @@ MODE = os.environ.get("CLIPFORGE_AGENT_MODE", "local").lower()
 INTERVAL = max(15, int(os.environ.get("CLIPFORGE_HEARTBEAT_SECONDS", "30")))
 
 if not SECRET:
-    raise SystemExit("Missing CLIPFORGE_AGENT_SECRET. Set it to the same value as Cloudflare AGENT_SHARED_SECRET.")
+    raise SystemExit("Missing CLIPFORGE_AGENT_SECRET. Set it in agent/.env and Cloudflare AGENT_SHARED_SECRET.")
 if MODE not in ("local", "cloud"):
     raise SystemExit("CLIPFORGE_AGENT_MODE must be local or cloud.")
 
@@ -49,11 +48,11 @@ def main():
         "architecture": platform.machine(),
         "python": platform.python_version(),
         "pipeline_ready": False,
-        "features": ["outbound-heartbeat", "job-polling-disabled-until-renderer-installed"]
+        "features": ["outbound-heartbeat", "job-claim-disabled-until-renderer-installed"]
     }
     call("register", {"agent_id": ID, "label": LABEL, "mode": MODE, "capabilities": capabilities})
     print(f"ClipForge agent connected: {LABEL} ({MODE})")
-    print("Heartbeat active. Job claiming remains disabled until the FFmpeg/AI renderer is installed.")
+    print("Heartbeat active. Job claiming stays disabled until the real FFmpeg/AI renderer is installed.")
     while True:
         try:
             call("heartbeat", {"agent_id": ID, "capabilities": capabilities})
