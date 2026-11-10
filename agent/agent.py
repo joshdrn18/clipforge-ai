@@ -138,7 +138,7 @@ def run_autoclip(job, source_path):
         raise RuntimeError("AutoClip pipeline failed. Check its provider setup and FFmpeg installation. " + detail)
     candidates = [p for p in exports.rglob("*.mp4") if p.is_file() and p.resolve() not in before and p.stat().st_mtime >= started - 5]
     if not candidates:
-        match = re.search(r"Exported to\\s+(.+)", result.stdout + "\\n" + result.stderr)
+        match = re.search(r"Exported to\s+(.+)", result.stdout + "\n" + result.stderr)
         if match:
             output_dir = Path(match.group(1).strip().strip('"'))
             candidates = list(output_dir.rglob("*.mp4")) if output_dir.exists() else []
