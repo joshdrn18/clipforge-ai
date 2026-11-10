@@ -18,6 +18,52 @@ Cloud-only AI video clipping workspace. The user's laptop is used only to open t
 - Jobs are always created in cloud mode.
 - The dashboard can be closed after the upload has completed; the remote worker continues independently.
 
+## Serverless renderer target: Modal Starter
+
+The selected alternative to a permanently running VPS is Modal serverless compute. A render container starts only when a source upload completes, processes one queued job, then exits. It does not sit idle and bill continuously.
+
+Modal Starter currently includes US$30/month in compute credits. To keep this project at RM0 out-of-pocket, configure both billing guardrails before deploying:
+- Workspace usage budget: US$30 per billing cycle (this caps total usage before credits).
+- Workspace spend limit: US$0 (Modal stops workloads that would create out-of-pocket charges; remaining applicable credits can still be used).
+
+Modal documents workspace budgets as hard caps and spend limits as hard caps on net charges after credits. Do not raise either limit. When the free allowance is exhausted, rendering should stop until the next billing cycle rather than incur a charge.
+
+### One-time account setup
+
+1. Create/sign in to a Modal account on the Starter plan: https://modal.com/
+2. In Usage & Billing, set the workspace usage budget to US$30 and the spend limit to US$0. Confirm both values before proceeding.
+3. In Modal Dashboard → Secrets, create a secret named `clipforge-cloud-secrets` with:
+   - `CLIPFORGE_API_URL=https://clipforge-ai-2c2.pages.dev`
+   - `CLIPFORGE_AGENT_SECRET=<new-long-random-secret>`
+   - `CLIPFORGE_AGENT_LABEL=ClipForge Modal Worker`
+   - `CLIPFORGE_DISPATCH_SECRET=<a-different-long-random-secret>`
+4. In GitHub repository Settings → Secrets and variables → Actions, add:
+   - `MODAL_TOKEN_ID`
+   - `MODAL_TOKEN_SECRET`
+5. Run GitHub Actions → Deploy ClipForge cloud renderer → Run workflow. This deploys from GitHub's hosted runner; nothing is installed on the user's laptop.
+6. Copy the deployed `dispatch` web endpoint URL from the Modal dashboard.
+7. In Cloudflare Pages project settings, add these runtime secrets:
+   - `AGENT_SHARED_SECRET` = the same value as Modal's `CLIPFORGE_AGENT_SECRET`
+   - `MODAL_DISPATCH_URL` = the deployed Modal `dispatch` endpoint URL
+   - `MODAL_DISPATCH_SECRET` = the same value as Modal's `CLIPFORGE_DISPATCH_SECRET`
+8. Redeploy the Pages project so the upload-complete API receives the new bindings.
+
+### How jobs run
+
+- Browser uploads the source video to Cloudflare R2 using multipart upload.
+- After upload completion, the Pages API securely dispatches a small job notification to Modal.
+- Modal starts one remote container, claims one queued job from D1, downloads the source through the authenticated Cloudflare agent API, runs AutoClip + FFmpeg, and uploads finished MP4 clips to R2.
+- The container exits after one job. The next upload starts another serverless execution.
+- Only one render container runs at a time to limit resource usage. A dispatch failure leaves the job queued and records a warning event.
+
+### Free-tier limitations
+
+- The included US$30 is a monthly compute credit, not unlimited rendering.
+- When the US$30 usage budget is reached, new renders stop. Do not increase the spend limit to force jobs through.
+- This initial configuration is CPU-only (2 Modal CPU units, 8 GiB RAM), one job at a time, with a six-hour task timeout.
+- Model downloads and cold starts can make the first render slower. The worker does not use paid persistent volumes or paid GPU hardware.
+- A successful deployment is not proof of a successful render. Verify with a real source video and confirm an MP4 appears in the Clip library.
+
 ## Oracle Cloud Always Free target
 
 The first deployment target is an OCI Ampere A1 ARM64 VM, using only the published Always Free allowance. Do not upgrade the tenancy or create paid resources without the user's explicit approval.
