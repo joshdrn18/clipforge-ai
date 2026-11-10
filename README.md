@@ -26,7 +26,8 @@ Cloudflare Workers are the control plane, not the video-rendering runtime. Heavy
 - [x] Authenticated agent source-download endpoint
 - [x] Local agent can claim jobs when AutoClip doctor passes
 - [x] Local agent runs AutoClip and uploads rendered MP4 assets to R2
-- [ ] Dashboard clip library playback and downloads
+- [x] Dashboard clip library playback and downloads with HTTP byte-range seeking
+- [x] 9:16, 16:9 and 1:1 output ratio selection
 - [x] Docker image and Compose template for a dedicated cloud agent
 - [ ] Cloud server provisioning and lifecycle management
 - [ ] Workspace authentication and per-user authorization
@@ -42,7 +43,7 @@ npm run dev
 
 ## Upstream engine
 
-The planned media pipeline uses [AutoClip](https://github.com/artbyjazi/autoclip), a separate MIT-licensed project. It requires Python 3.11 or 3.12, a full FFmpeg build with libass and libx264, and a configured LLM provider (or Ollama) for highlight selection.
+The integrated local media pipeline uses [AutoClip](https://github.com/artbyjazi/autoclip), a separate MIT-licensed project. It requires Python 3.11 or 3.12, a full FFmpeg build with libass and libx264, and a configured LLM provider (or Ollama) for highlight selection.
 
 ## License
 
