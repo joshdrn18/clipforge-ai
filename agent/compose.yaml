@@ -9,6 +9,7 @@ services:
       CLIPFORGE_AGENT_MODE: cloud
       CLIPFORGE_AGENT_LABEL: Cloud Worker
       AUTOCLIP_HOME: /data/autoclip
+      CLIPFORGE_AGENT_ID_FILE: /data/worker-id
     volumes:
       - autoclip-data:/data/autoclip
 
