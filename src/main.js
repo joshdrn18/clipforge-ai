@@ -1,6 +1,6 @@
 import './style.css';
 
-const state = { mode: 'auto', jobs: [], agents: [], assets: [], selectedFile: null, apiOnline: false };
+const state = { mode: 'auto', aspectRatio: '9:16', jobs: [], agents: [], assets: [], selectedFile: null, apiOnline: false };
 const $ = (s) => document.querySelector(s);
 const fmtBytes = (n) => n < 1024 * 1024 ? (n / 1024).toFixed(0) + ' KB' : (n / 1024 / 1024).toFixed(1) + ' MB';
 const fmtDuration = (s) => s ? Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0') : '—';
@@ -36,7 +36,7 @@ document.querySelector('#app').innerHTML = `
         <label class="dropzone" id="dropzone" for="file-input"><input id="file-input" type="file" accept="video/*,.mp4,.mov,.mkv,.webm" /><span class="upload-symbol">↑</span><b>Drop your video here</b><span>or <u>browse files</u> from your device</span><small>MP4, MOV, MKV, WEBM · Duration limited by available processing capacity</small></label>
         <div class="file-selected" id="file-selected" hidden></div>
         <div class="field-row"><label>PROCESSING MODE</label><div class="mode-select" role="group"><button data-mode="auto" class="mode-option selected">Auto <small>Recommended</small></button><button data-mode="local" class="mode-option">Local <small>Your device</small></button><button data-mode="cloud" class="mode-option">Cloud <small>Remote server</small></button></div></div>
-        <div class="field-row"><label>CLIP FORMAT</label><div class="format-pills"><span class="format-pill active">▯ 9:16 Vertical</span><span class="format-pill">▭ 16:9</span><span class="format-pill">□ 1:1</span></div></div>
+        <div class="field-row"><label>CLIP FORMAT</label><div class="format-pills"><button type="button" data-ratio="9:16" class="format-pill active">▯ 9:16 Vertical</button><button type="button" data-ratio="16:9" class="format-pill">▭ 16:9</button><button type="button" data-ratio="1:1" class="format-pill">□ 1:1</button></div></div>
         <button class="primary-button" id="create-job" disabled><span>✦</span> Prepare clipping job <span class="button-arrow">→</span></button>
         <p class="form-note" id="form-note">Choose a video to continue. Rendering requires a connected local or cloud agent.</p>
       </div>
@@ -141,6 +141,10 @@ $('#dropzone').addEventListener('drop', e => {
     const transfer = new DataTransfer(); transfer.items.add(f); fileInput.files = transfer.files; fileInput.dispatchEvent(new Event('change'));
   }
 });
+document.querySelectorAll('[data-ratio]').forEach(b => b.addEventListener('click', () => {
+  state.aspectRatio = b.dataset.ratio;
+  document.querySelectorAll('[data-ratio]').forEach(x => x.classList.toggle('active', x === b));
+}));
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
   state.mode = b.dataset.mode;
   document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('selected', x === b));
@@ -154,7 +158,7 @@ $('#create-job').addEventListener('click', async () => {
   const setProgress = (message) => { $('#form-note').textContent = message; btn.innerHTML = '<span class="spinner"></span> ' + message; };
   try {
     setProgress('Creating job…');
-    const response = await fetch('/api/jobs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source_name:f.name,source_size:f.size,processing_mode:state.mode,settings:{aspect_ratio:'9:16'}}) });
+    const response = await fetch('/api/jobs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source_name:f.name,source_size:f.size,processing_mode:state.mode,settings:{aspect_ratio:state.aspectRatio}}) });
     const data = await response.json();
     if (!response.ok || !data.ok) throw new Error(data.error || 'Could not create job');
     const jobId = data.job.id;
