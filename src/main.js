@@ -100,7 +100,7 @@ fileInput.addEventListener('change', () => {
     $('#file-selected').innerHTML = `<span>▣</span><div><b>${escapeHtml(f.name)}</b><small>${fmtBytes(f.size)}</small></div><button id="remove-file" type="button">×</button>`;
     $('#remove-file').onclick = () => { fileInput.value = ''; state.selectedFile = null; $('#file-selected').hidden = true; $('#create-job').disabled = true; };
     $('#create-job').disabled = false;
-    $('#form-note').textContent = 'File selected. Job metadata can be queued; a connected processing agent is required to render it.';
+    $('#form-note').textContent = 'File selected. Clicking below uploads the video to R2 in chunks before adding it to the processing queue.';
   } else $('#create-job').disabled = true;
 });
 $('#dropzone').addEventListener('dragover', e => { e.preventDefault(); $('#dropzone').classList.add('dragging'); });
