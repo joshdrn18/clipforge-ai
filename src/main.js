@@ -1,6 +1,6 @@
 import './style.css';
 
-const state = { mode: 'auto', jobs: [], agents: [], selectedFile: null, apiOnline: false };
+const state = { mode: 'auto', jobs: [], agents: [], assets: [], selectedFile: null, apiOnline: false };
 const $ = (s) => document.querySelector(s);
 const fmtBytes = (n) => n < 1024 * 1024 ? (n / 1024).toFixed(0) + ' KB' : (n / 1024 / 1024).toFixed(1) + ' MB';
 const fmtDuration = (s) => s ? Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0') : '—';
@@ -50,6 +50,10 @@ document.querySelector('#app').innerHTML = `
       </div>
     </section>
     <section class="panel queue-panel" id="queue"><div class="panel-heading compact"><div><span class="step-label">03 / ACTIVITY</span><h2>Recent jobs</h2></div><a href="#queue" class="text-link">View all <span>→</span></a></div><div id="jobs-list" class="jobs-list"><div class="empty-state"><div class="empty-icon">▤</div><b>Your next great clip starts here</b><span>Jobs you create will appear in this queue.</span></div></div></section>
+    <section class="panel library-panel" id="outputs">
+      <div class="panel-heading compact"><div><span class="step-label">04 / EXPORTS</span><h2>Clip library</h2><p>Rendered clips saved from your processing jobs.</p></div><span class="status-chip" id="library-count">0 CLIPS</span></div>
+      <div id="assets-list" class="assets-grid"><div class="empty-state"><div class="empty-icon">▤</div><b>Your finished clips will appear here</b><span>Once an agent renders a job, preview and download the MP4 here.</span></div></div>
+    </section>
     <section class="setup-strip" id="setup"><div><span class="step-label">NEXT STEP</span><b>Connect your first processing agent</b><p>The web workspace is ready. Install the local agent or configure a remote worker to start rendering.</p></div><a href="https://github.com/artbyjazi/autoclip" target="_blank" rel="noreferrer">Explore AutoClip engine ↗</a></section>
     <footer>CLIPFORGE AI <span>·</span> Built for creators who make more with less.</footer>
   </main>
@@ -57,14 +61,16 @@ document.querySelector('#app').innerHTML = `
 
 async function refresh() {
   try {
-    const [health, jobs, agents] = await Promise.all([
+    const [health, jobs, agents, assets] = await Promise.all([
       fetch('/api/health').then(r => r.json()),
       fetch('/api/jobs').then(r => r.json()),
-      fetch('/api/agents').then(r => r.json())
+      fetch('/api/agents').then(r => r.json()),
+      fetch('/api/assets').then(r => r.json())
     ]);
     state.apiOnline = !!health.ok;
     state.jobs = jobs.jobs || [];
     state.agents = agents.agents || [];
+    state.assets = assets.assets || [];
     $('#api-dot').className = state.apiOnline ? 'online' : 'offline-dot';
     $('#api-label').textContent = state.apiOnline ? 'System operational' : 'API unavailable';
     $('#metric-jobs').textContent = state.jobs.length;
@@ -83,6 +89,7 @@ async function refresh() {
     $('#local-state').className = 'agent-state ' + (localAgent && isPipelineReady(localAgent) ? 'online-state' : 'offline');
     $('#cloud-state').className = 'agent-state ' + (cloudAgent && isPipelineReady(cloudAgent) ? 'online-state' : 'offline');
     renderJobs();
+    renderAssets();
   } catch {
     $('#api-label').textContent = 'Waiting for deployment';
     $('#api-dot').className = 'offline-dot';
@@ -95,6 +102,22 @@ function renderJobs() {
     return;
   }
   root.innerHTML = state.jobs.map(j => `<div class="job-row"><div class="job-thumb">▶</div><div class="job-details"><b>${escapeHtml(j.source_name)}</b><small>${fmtBytes(j.source_size || 0)} · ${fmtDuration(j.duration_seconds)} · ${escapeHtml(j.processing_mode || 'auto').toUpperCase()}</small></div><div class="job-progress"><span>${escapeHtml(j.stage || j.status)}</span><div><i style="width:${Math.max(0,Math.min(100,j.progress || 0))}%"></i></div></div><span class="job-status">${escapeHtml(j.status)}</span></div>`).join('');
+}
+function renderAssets() {
+  const root = $('#assets-list');
+  $('#library-count').textContent = state.assets.length + ' CLIPS';
+  if (!state.assets.length) {
+    root.innerHTML = '<div class="empty-state"><div class="empty-icon">▤</div><b>Your finished clips will appear here</b><span>Once an agent renders a job, preview and download the MP4 here.</span></div>';
+    return;
+  }
+  root.innerHTML = state.assets.map(asset => {
+    const url = '/api/assets/' + encodeURIComponent(asset.id);
+    return `<article class="asset-card">
+      <video controls preload="metadata" playsinline src="${url}"></video>
+      <div class="asset-meta"><b>${escapeHtml(asset.file_name || 'clip.mp4')}</b><small>${fmtBytes(asset.size_bytes || 0)} · ${escapeHtml(asset.source_name || 'Source video')}</small></div>
+      <a class="asset-download" href="${url}" download="${escapeHtml(asset.file_name || 'clip.mp4')}">↓ Download MP4</a>
+    </article>`;
+  }).join('');
 }
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 const fileInput = $('#file-input');
