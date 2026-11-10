@@ -3,10 +3,11 @@ services:
     build: .
     container_name: clipforge-cloud-worker
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
+      CLIPFORGE_API_URL: ${CLIPFORGE_API_URL:-https://clipforge-ai-2c2.pages.dev}
+      CLIPFORGE_AGENT_SECRET: ${CLIPFORGE_AGENT_SECRET:?Set CLIPFORGE_AGENT_SECRET on the cloud host}
       CLIPFORGE_AGENT_MODE: cloud
+      CLIPFORGE_AGENT_LABEL: ${CLIPFORGE_AGENT_LABEL:-ClipForge Cloud Worker}
       CLIPFORGE_AGENT_LABEL: Cloud Worker
       AUTOCLIP_HOME: /data/autoclip
       CLIPFORGE_AGENT_ID_FILE: /data/worker-id
