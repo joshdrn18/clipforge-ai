@@ -13,10 +13,11 @@ The Windows launcher installs the Python agent and the upstream AutoClip engine,
 
 1. Download the ClipForge repository ZIP and extract it.
 2. Open the `agent` folder.
-3. Double-click `START-CLIPFORGE.bat`.
-4. If FFmpeg is installed during the first run, close the window and double-click the launcher again.
+3. Double-click `START-CLIPFORGE.bat`. It installs the local agent and AutoClip dependencies.
+4. If FFmpeg is installed during the first run, close the window and double-click the launcher again so Windows refreshes PATH.
 5. On first run, Notepad opens `.env`. Set `CLIPFORGE_AGENT_SECRET` to the same rotated secret as Cloudflare's `AGENT_SHARED_SECRET`. Do not use a secret that has been shared in chat or committed to GitHub.
-6. Keep the launcher window open while the computer is processing.
+6. If the launcher says the renderer is not ready, double-click `CONFIGURE-AI.bat` and add an AI provider key. Then run `CHECK-CLIPFORGE.bat`.
+7. Double-click `START-CLIPFORGE.bat` again and keep its window open while the computer is processing.
 
 The launcher installs AutoClip from its upstream GitHub source through `requirements.txt`. This downloads sizeable Python/AI dependencies and may take several minutes.
 
