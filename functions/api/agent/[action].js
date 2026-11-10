@@ -48,13 +48,24 @@ export async function onRequest({ request, env, params }) {
 
     if (action === "claim") {
       if (body.pipeline_ready !== true) return json({ ok: true, job: null, reason: "pipeline_not_ready" });
+      const localCutoff = new Date(Date.now() - 90_000).toISOString();
       const result = await env.DB.prepare(`UPDATE jobs SET status='processing', stage='claimed_by_agent', updated_at=?
         WHERE id = (
-          SELECT id FROM jobs WHERE status='queued'
-          AND (processing_mode='auto' OR processing_mode=?)
-          ORDER BY created_at ASC LIMIT 1
+          SELECT j.id FROM jobs j WHERE j.status='queued'
+          AND (
+            j.processing_mode=?
+            OR (j.processing_mode='auto' AND (
+              ?='local'
+              OR NOT EXISTS (
+                SELECT 1 FROM processing_agents p
+                WHERE p.mode='local' AND p.status='online' AND p.last_seen_at > ?
+                AND json_extract(p.capabilities_json, '$.pipeline_ready') = 1
+              )
+            ))
+          )
+          ORDER BY j.created_at ASC LIMIT 1
         ) AND status='queued' RETURNING id, source_name, source_size, duration_seconds, processing_mode, settings_json`)
-        .bind(timestamp, agent.mode).first();
+        .bind(timestamp, agent.mode, agent.mode, localCutoff).first();
       if (!result) return json({ ok: true, job: null });
       await env.DB.prepare("INSERT INTO job_events (job_id, level, message, created_at) VALUES (?, 'info', ?, ?)")
         .bind(result.id, `Job claimed by ${agent.mode} agent ${agentId}.`, timestamp).run();
