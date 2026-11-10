@@ -210,6 +210,7 @@ def process_job(job):
 def main():
     parser = argparse.ArgumentParser(description="ClipForge remote cloud rendering worker")
     parser.add_argument("--check", action="store_true", help="test cloud server API authentication and renderer readiness, then exit")
+    parser.add_argument("--once", action="store_true", help="process one queued job and exit")
     args = parser.parse_args()
 
     caps = capabilities()
@@ -221,6 +222,27 @@ def main():
         print(f"Renderer readiness: {'READY' if caps['pipeline_ready'] else 'NOT READY'}")
         if _RENDERER_DIAGNOSTIC:
             print(_RENDERER_DIAGNOSTIC)
+        return
+
+    if args.once:
+        if not caps["pipeline_ready"]:
+            raise SystemExit("Remote renderer is not ready: " + (_RENDERER_DIAGNOSTIC or "AutoClip/FFmpeg check failed"))
+        claimed = call("claim", {"agent_id": ID, "pipeline_ready": True})
+        job = claimed.get("job")
+        if not job:
+            print("No queued ClipForge job is available.")
+            return
+        print("Claimed one cloud job: " + job["id"])
+        try:
+            process_job(job)
+            print("Job completed: " + job["id"])
+        except Exception as exc:
+            print("Job failed: " + str(exc))
+            try:
+                call("fail", {"agent_id": ID, "job_id": job["id"], "error": str(exc)[:1000]})
+            except Exception as api_error:
+                print("Could not report job failure: " + str(api_error))
+            raise
         return
 
     print(f"ClipForge cloud worker connected: {LABEL} ({MODE})")
