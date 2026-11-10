@@ -72,10 +72,16 @@ async function refresh() {
     $('#queue-count').textContent = state.jobs.filter(j => ['queued','processing'].includes(j.status)).length;
     $('#metric-agents').textContent = state.agents.filter(a => a.status === 'online').length;
     $('#agent-status').textContent = state.agents.some(a => a.status === 'online') ? 'CONNECTED' : 'NO AGENTS';
-    $('#local-state').textContent = state.agents.some(a => a.mode === 'local' && a.status === 'online') ? 'Online' : 'Offline';
-    $('#cloud-state').textContent = state.agents.some(a => a.mode === 'cloud' && a.status === 'online') ? 'Online' : 'Not configured';
-    $('#local-state').className = 'agent-state ' + (state.agents.some(a => a.mode === 'local' && a.status === 'online') ? 'online-state' : 'offline');
-    $('#cloud-state').className = 'agent-state ' + (state.agents.some(a => a.mode === 'cloud' && a.status === 'online') ? 'online-state' : 'offline');
+    const localAgent = state.agents.find(a => a.mode === 'local' && a.status === 'online');
+    const cloudAgent = state.agents.find(a => a.mode === 'cloud' && a.status === 'online');
+    const isPipelineReady = agent => {
+      try { return JSON.parse(agent?.capabilities_json || '{}').pipeline_ready === true; }
+      catch { return false; }
+    };
+    $('#local-state').textContent = !localAgent ? 'Offline' : (isPipelineReady(localAgent) ? 'Ready' : 'Setup required');
+    $('#cloud-state').textContent = !cloudAgent ? 'Not configured' : (isPipelineReady(cloudAgent) ? 'Ready' : 'Setup required');
+    $('#local-state').className = 'agent-state ' + (localAgent && isPipelineReady(localAgent) ? 'online-state' : 'offline');
+    $('#cloud-state').className = 'agent-state ' + (cloudAgent && isPipelineReady(cloudAgent) ? 'online-state' : 'offline');
     renderJobs();
   } catch {
     $('#api-label').textContent = 'Waiting for deployment';
