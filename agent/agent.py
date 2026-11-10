@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""ClipForge local processing agent.
-
-The agent connects outbound, claims jobs only when AutoClip and FFmpeg are installed,
-runs the upstream AutoClip pipeline locally, and streams finished clips back to R2.
-"""
+"""ClipForge cloud rendering worker. Runs only inside a remote server/container."""
 import argparse
 import json
 import os
@@ -26,15 +22,14 @@ BASE_URL = os.environ.get("CLIPFORGE_API_URL", "https://clipforge-ai-2c2.pages.d
 SECRET = os.environ.get("CLIPFORGE_AGENT_SECRET", "")
 AGENT_ID_FILE = Path.home() / ".clipforge-agent-id"
 LABEL = os.environ.get("CLIPFORGE_AGENT_LABEL", socket.gethostname())
-MODE = os.environ.get("CLIPFORGE_AGENT_MODE", "local").lower()
+MODE = "cloud"
 INTERVAL = max(15, int(os.environ.get("CLIPFORGE_HEARTBEAT_SECONDS", "30")))
 CHUNK_SIZE = 32 * 1024 * 1024
 MAX_CLIPS = max(1, min(20, int(os.environ.get("CLIPFORGE_MAX_CLIPS", "5"))))
 
 if not SECRET:
-    raise SystemExit("Missing CLIPFORGE_AGENT_SECRET. Set it in agent/.env and Cloudflare AGENT_SHARED_SECRET.")
-if MODE not in ("local", "cloud"):
-    raise SystemExit("CLIPFORGE_AGENT_MODE must be local or cloud.")
+    raise SystemExit("Missing CLIPFORGE_AGENT_SECRET. Configure it as a secret on the cloud server and as AGENT_SHARED_SECRET in Cloudflare.")
+
 
 def agent_id():
     if AGENT_ID_FILE.exists():
@@ -213,8 +208,8 @@ def process_job(job):
     call("complete", {"agent_id": ID, "job_id": job_id})
 
 def main():
-    parser = argparse.ArgumentParser(description="ClipForge processing agent")
-    parser.add_argument("--check", action="store_true", help="test API authentication and agent registration, then exit")
+    parser = argparse.ArgumentParser(description="ClipForge remote cloud rendering worker")
+    parser.add_argument("--check", action="store_true", help="test cloud server API authentication and renderer readiness, then exit")
     args = parser.parse_args()
 
     caps = capabilities()
@@ -228,7 +223,7 @@ def main():
             print(_RENDERER_DIAGNOSTIC)
         return
 
-    print(f"ClipForge agent connected: {LABEL} ({MODE})")
+    print(f"ClipForge cloud worker connected: {LABEL} ({MODE})")
     if not caps["pipeline_ready"]:
         print("Agent is online, but rendering is disabled until AutoClip, full FFmpeg, and an AI provider pass 'autoclip doctor'.")
         if _RENDERER_DIAGNOSTIC:
@@ -263,7 +258,7 @@ def main():
                 print(f"Agent loop issue: {exc}")
                 time.sleep(10)
     except KeyboardInterrupt:
-        print("Stopping ClipForge agent...")
+        print("Stopping ClipForge cloud worker...")
     finally:
         stop_event.set()
 
