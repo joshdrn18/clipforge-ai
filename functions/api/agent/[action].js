@@ -79,7 +79,7 @@ export async function onRequest({ request, env, params }) {
       const fileName = String(body.file_name || "clip.mp4").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 160);
       const size = Number(body.file_size || 0);
       const job = await env.DB.prepare("SELECT id, status FROM jobs WHERE id=? AND status='processing'").bind(jobId).first();
-      if (!job || !Number.isSafeInteger(size) || size <= 0) return json({ ok: false, error: "Active job and valid file_size are required" }, 400);
+      if (!job || !Number.isSafeInteger(size) || size <= 0 || size > 5 * 1024 * 1024 * 1024) return json({ ok: false, error: "Active job and valid file_size (up to 5 GiB) are required" }, 400);
       const key = "outputs/" + jobId + "/" + uuid() + "-" + fileName;
       const upload = await env.MEDIA.createMultipartUpload(key, { httpMetadata: { contentType: String(body.content_type || "video/mp4") } });
       return json({ ok: true, upload_id: upload.uploadId, key, part_size: 32 * 1024 * 1024 });
@@ -115,8 +115,10 @@ export async function onRequest({ request, env, params }) {
       const size = Number(body.file_size || 0);
       const parts = Array.isArray(body.parts) ? body.parts : [];
       if (!jobId || !key.startsWith("outputs/" + jobId + "/") || !uploadId || !parts.length) return json({ ok: false, error: "Invalid asset completion request" }, 400);
+      const activeJob = await env.DB.prepare("SELECT id FROM jobs WHERE id=? AND status='processing'").bind(jobId).first();
+      if (!activeJob) return json({ ok: false, error: "Job is no longer processing" }, 409);
       const normalized = parts.map(p => ({ partNumber: Number(p.part_number), etag: String(p.etag || "") })).filter(p => Number.isInteger(p.partNumber) && p.partNumber > 0 && p.etag);
-      if (normalized.length !== parts.length) return json({ ok: false, error: "Invalid uploaded asset parts" }, 400);
+      if (normalized.length !== parts.length || normalized.some((p, i) => p.partNumber !== i + 1)) return json({ ok: false, error: "Uploaded parts must be valid and sequential" }, 400);
       const object = await env.MEDIA.resumeMultipartUpload(key, uploadId).complete(normalized);
       await env.DB.prepare("INSERT INTO assets (id, job_id, kind, object_key, file_name, size_bytes, created_at) VALUES (?, ?, 'clip', ?, ?, ?, ?)")
         .bind(uuid(), jobId, key, fileName, Number(object.size || size), now()).run();
@@ -137,6 +139,10 @@ export async function onRequest({ request, env, params }) {
     if (action === "complete" || action === "fail") {
       const jobId = String(body.job_id || "");
       if (!jobId) return json({ ok: false, error: "job_id is required" }, 400);
+      if (action === "complete") {
+        const clips = await env.DB.prepare("SELECT COUNT(*) AS total FROM assets WHERE job_id=? AND kind='clip'").bind(jobId).first();
+        if (!Number(clips?.total || 0)) return json({ ok: false, error: "Cannot complete a job before at least one rendered clip is uploaded." }, 409);
+      }
       const status = action === "complete" ? "completed" : "failed";
       const stage = status;
       const error = action === "fail" ? String(body.error || "Agent reported a processing failure").slice(0, 1000) : null;
