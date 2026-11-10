@@ -132,3 +132,5 @@ $('#create-job').addEventListener('click', async () => {
 });
 refresh();
 setInterval(refresh, 12000);
+
+// ClipForge UI bundle entrypoint.
