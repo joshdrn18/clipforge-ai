@@ -61,6 +61,47 @@ export async function onRequest({ request, env, params }) {
       return json({ ok: true, job: result });
     }
 
+
+    if (action === "asset-init") {
+      if (!env.MEDIA) return json({ ok: false, error: "R2 storage binding unavailable" }, 503);
+      const jobId = String(body.job_id || "");
+      const fileName = String(body.file_name || "clip.mp4").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 160);
+      const size = Number(body.file_size || 0);
+      const job = await env.DB.prepare("SELECT id, status FROM jobs WHERE id=? AND status='processing'").bind(jobId).first();
+      if (!job || !Number.isSafeInteger(size) || size <= 0) return json({ ok: false, error: "Active job and valid file_size are required" }, 400);
+      const key = "outputs/" + jobId + "/" + uuid() + "-" + fileName;
+      const upload = await env.MEDIA.createMultipartUpload(key, { httpMetadata: { contentType: String(body.content_type || "video/mp4") } });
+      return json({ ok: true, upload_id: upload.uploadId, key, part_size: 32 * 1024 * 1024 });
+    }
+
+    if (action === "asset-part") {
+      if (!env.MEDIA) return json({ ok: false, error: "R2 storage binding unavailable" }, 503);
+      const url = new URL(request.url);
+      const key = url.searchParams.get("key") || "";
+      const uploadId = url.searchParams.get("upload_id") || "";
+      const partNumber = Number(url.searchParams.get("part_number"));
+      if (!key.startsWith("outputs/") || !uploadId || !Number.isInteger(partNumber) || partNumber < 1 || partNumber > 10000) return json({ ok: false, error: "Invalid asset upload parameters" }, 400);
+      const result = await env.MEDIA.resumeMultipartUpload(key, uploadId).uploadPart(partNumber, request.body);
+      return json({ ok: true, part_number: partNumber, etag: result.etag });
+    }
+
+    if (action === "asset-complete") {
+      if (!env.MEDIA) return json({ ok: false, error: "R2 storage binding unavailable" }, 503);
+      const jobId = String(body.job_id || "");
+      const key = String(body.key || "");
+      const uploadId = String(body.upload_id || "");
+      const fileName = String(body.file_name || "clip.mp4").slice(0, 200);
+      const size = Number(body.file_size || 0);
+      const parts = Array.isArray(body.parts) ? body.parts : [];
+      if (!jobId || !key.startsWith("outputs/" + jobId + "/") || !uploadId || !parts.length) return json({ ok: false, error: "Invalid asset completion request" }, 400);
+      const normalized = parts.map(p => ({ partNumber: Number(p.part_number), etag: String(p.etag || "") })).filter(p => Number.isInteger(p.partNumber) && p.partNumber > 0 && p.etag);
+      if (normalized.length !== parts.length) return json({ ok: false, error: "Invalid uploaded asset parts" }, 400);
+      const object = await env.MEDIA.resumeMultipartUpload(key, uploadId).complete(normalized);
+      await env.DB.prepare("INSERT INTO assets (id, job_id, kind, object_key, file_name, size_bytes, created_at) VALUES (?, ?, 'clip', ?, ?, ?, ?)")
+        .bind(uuid(), jobId, key, fileName, Number(object.size || size), now()).run();
+      return json({ ok: true, object_key: key, size_bytes: object.size || size });
+    }
+
     if (action === "progress") {
       const jobId = String(body.job_id || "");
       const progress = Math.max(0, Math.min(99, Number(body.progress || 0)));
