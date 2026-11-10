@@ -85,6 +85,16 @@ export async function onRequest({ request, env, params }) {
       return json({ ok: true, part_number: partNumber, etag: result.etag });
     }
 
+
+    if (action === "asset-abort") {
+      if (!env.MEDIA) return json({ ok: false, error: "R2 storage binding unavailable" }, 503);
+      const key = String(body.key || "");
+      const uploadId = String(body.upload_id || "");
+      if (!key.startsWith("outputs/") || !uploadId) return json({ ok: false, error: "Invalid asset abort request" }, 400);
+      await env.MEDIA.resumeMultipartUpload(key, uploadId).abort();
+      return json({ ok: true });
+    }
+
     if (action === "asset-complete") {
       if (!env.MEDIA) return json({ ok: false, error: "R2 storage binding unavailable" }, 503);
       const jobId = String(body.job_id || "");
