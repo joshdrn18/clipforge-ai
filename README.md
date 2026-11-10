@@ -30,3 +30,6 @@ npm run dev
 ## License
 
 The ClipForge AI control-plane code is MIT. AutoClip is a separate upstream project by artbyjazi and retains its own MIT license and notices when integrated.
+
+
+<!-- Pages CI trigger: source control connected; deployments build from main. -->
