@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).with_name(".env"))
 BASE_URL = os.environ.get("CLIPFORGE_API_URL", "https://clipforge-ai-2c2.pages.dev").rstrip("/")
 SECRET = os.environ.get("CLIPFORGE_AGENT_SECRET", "")
-AGENT_ID_FILE = Path.home() / ".clipforge-agent-id"
+AGENT_ID_FILE = Path(os.environ.get("CLIPFORGE_AGENT_ID_FILE", str(Path.home() / ".clipforge-agent-id")))
 LABEL = os.environ.get("CLIPFORGE_AGENT_LABEL", socket.gethostname())
 MODE = "cloud"
 INTERVAL = max(15, int(os.environ.get("CLIPFORGE_HEARTBEAT_SECONDS", "30")))
