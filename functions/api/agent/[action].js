@@ -21,7 +21,7 @@ export async function onRequest({ request, env, params }) {
 
   try {
     if (action === "register") {
-      const agentId = String(body.agent_id || "").slice(0, 80);
+      const agentId = String(body.agent_id || new URL(request.url).searchParams.get("agent_id") || "").slice(0, 80);
       const label = String(body.label || "Local Agent").trim().slice(0, 100);
       const mode = body.mode === "cloud" ? "cloud" : "local";
       if (!agentId) return json({ ok: false, error: "agent_id is required" }, 400);
