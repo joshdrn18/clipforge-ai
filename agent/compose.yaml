@@ -8,11 +8,12 @@ services:
       CLIPFORGE_AGENT_SECRET: ${CLIPFORGE_AGENT_SECRET:?Set CLIPFORGE_AGENT_SECRET on the cloud host}
       CLIPFORGE_AGENT_MODE: cloud
       CLIPFORGE_AGENT_LABEL: ${CLIPFORGE_AGENT_LABEL:-ClipForge Cloud Worker}
-      CLIPFORGE_AGENT_LABEL: Cloud Worker
       AUTOCLIP_HOME: /data/autoclip
-      CLIPFORGE_AGENT_ID_FILE: /data/worker-id
+      CLIPFORGE_AGENT_ID_FILE: /data/worker-state/worker-id
     volumes:
       - autoclip-data:/data/autoclip
+      - worker-state:/data/worker-state
 
 volumes:
   autoclip-data:
+  worker-state:
