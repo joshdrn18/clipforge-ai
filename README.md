@@ -25,6 +25,7 @@ Cloudflare Workers are the control plane, not the video-rendering runtime. Heavy
 - [x] R2 multipart source upload in 32 MiB chunks
 - [x] Authenticated agent source-download endpoint
 - [x] Local agent can claim jobs when AutoClip doctor passes
+- [x] One-click agent connection test for Cloudflare authentication, registration, and renderer readiness
 - [x] Local agent runs AutoClip and uploads rendered MP4 assets to R2
 - [x] Dashboard clip library playback and downloads with HTTP byte-range seeking
 - [x] Failed-job retry with source-file verification and partial-output cleanup
@@ -36,6 +37,16 @@ Cloudflare Workers are the control plane, not the video-rendering runtime. Heavy
 - [ ] Workspace authentication and per-user authorization
 
 **Important:** the local rendering path is wired to AutoClip, but has not yet been end-to-end tested on your computer with a real source video and configured AI provider. The cloud agent still needs a separately provisioned server. Do not expose this unfinished workspace publicly with valuable/private media until authentication and authorization are implemented.
+
+## Local agent setup (Windows)
+
+1. Double-click `agent/START-CLIPFORGE.bat` and let it install the agent dependencies.
+2. Enter the same rotated agent secret configured in Cloudflare when Notepad opens.
+3. Configure an AI provider with `agent/CONFIGURE-AI.bat` (or configure Ollama).
+4. Run `agent/TEST-CONNECTION.bat` to verify API access, registration, and renderer readiness.
+5. Double-click `agent/START-CLIPFORGE.bat` to keep the agent online and process queued jobs.
+
+Keep the agent window open while processing. The first installation downloads large AI/video dependencies and may take a while.
 
 ## Local development
 
