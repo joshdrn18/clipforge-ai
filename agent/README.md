@@ -43,3 +43,22 @@ Run `autoclip doctor` to verify Python, FFmpeg, dependencies, and provider readi
 6. Reports job progress and completion to the dashboard.
 
 The cloud control plane does not render videos. Cloud processing requires a separate machine/container running the same agent in cloud mode. Clip selection quality depends on the configured model and the source content.
+
+## Cloud worker with Docker
+
+A cloud worker is a separate Linux server or VPS. Cloudflare Pages/Workers do not render video.
+
+1. Install Docker Engine and Docker Compose on the server.
+2. Copy the `agent` folder to the server (do not commit or share `.env`).
+3. Create `.env` with `CLIPFORGE_API_URL` and the rotated `CLIPFORGE_AGENT_SECRET`.
+4. Build the image: `docker compose -f compose.yaml build`.
+5. Configure the provider once in the persistent AutoClip volume:
+
+```bash
+docker compose -f compose.yaml run --rm --entrypoint autoclip clipforge-cloud-agent config set-secret openai
+```
+
+6. Start the cloud worker: `docker compose -f compose.yaml up -d`.
+7. Check readiness: `docker compose -f compose.yaml logs -f`.
+
+The cloud worker uses CPU by default. Rendering speed depends on the server CPU/RAM and source length. VPS compute and storage are not unlimited or guaranteed free.
