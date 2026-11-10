@@ -69,7 +69,7 @@ def renderer_ready():
     try:
         doctor = subprocess.run(["autoclip", "doctor"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
         _RENDERER_READY = doctor.returncode == 0
-        _RENDERER_DIAGNOSTIC = (doctor.stdout + "\\n" + doctor.stderr)[-2500:]
+        _RENDERER_DIAGNOSTIC = (doctor.stdout + "\n" + doctor.stderr)[-2500:]
     except Exception as exc:
         _RENDERER_READY = False
         _RENDERER_DIAGNOSTIC = str(exc)
