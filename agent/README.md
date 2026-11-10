@@ -1,64 +1,25 @@
-# ClipForge Local Agent
+# ClipForge Cloud Worker
 
-The Windows launcher installs the Python agent and the upstream AutoClip engine, then connects outbound to ClipForge. It does not open an inbound port.
+This container is designed to run on a separate Linux cloud server/container host only. It must not be run on a personal laptop.
 
-## Requirements
+## Deployment
 
-- Windows 10/11
-- Python 3.11 or 3.12 (Python 3.13 is not supported by AutoClip's current reframe dependencies)
-- Full FFmpeg build with libass and libx264 (the launcher attempts to install Gyan FFmpeg with winget)
-- A working AI provider for highlight selection: Ollama locally, or an API key supported by AutoClip
+Deploy this directory using your cloud provider's server-side Docker/Compose integration. The dashboard repository is the source of truth; no local installation is required on the user's computer.
 
-## Windows quick start
+Set these environment variables as provider secrets/configuration:
 
-1. Download the ClipForge repository ZIP and extract it.
-2. Open the `agent` folder.
-3. Double-click `START-CLIPFORGE.bat`. It installs the local agent and AutoClip dependencies.
-4. If FFmpeg is installed during the first run, close the window and double-click the launcher again so Windows refreshes PATH.
-5. On first run, Notepad opens `.env`. Set `CLIPFORGE_AGENT_SECRET` to the same rotated secret as Cloudflare's `AGENT_SHARED_SECRET`. Do not use a secret that has been shared in chat or committed to GitHub.
-6. If the launcher says the renderer is not ready, double-click `CONFIGURE-AI.bat` and add an AI provider key. Then run `CHECK-CLIPFORGE.bat`.
-7. Double-click `START-CLIPFORGE.bat` again and keep its window open while the computer is processing.
+- `CLIPFORGE_API_URL=https://clipforge-ai-2c2.pages.dev`
+- `CLIPFORGE_AGENT_SECRET` — long random secret, also set as Cloudflare Pages `AGENT_SHARED_SECRET`
+- `CLIPFORGE_AGENT_LABEL=ClipForge Cloud Worker`
+- `CLIPFORGE_AGENT_MODE=cloud`
+- `AUTOCLIP_HOME=/data/autoclip`
 
-The launcher installs AutoClip from its upstream GitHub source through `requirements.txt`. This downloads sizeable Python/AI dependencies and may take several minutes.
+Persist the `/data/autoclip` volume so model downloads and AutoClip state survive container restarts.
 
-## Configure AI highlight selection
+The worker makes outbound HTTPS requests to the ClipForge control plane, claims queued jobs, downloads source videos, runs AutoClip/FFmpeg, and uploads generated MP4 files to R2.
 
-AutoClip requires an available LLM provider for highlight ranking. A provider can be configured with the AutoClip CLI, for example:
+## Health/readiness
 
-```text
-autoclip config set-secret openai
-```
+The worker registers its renderer capabilities. A worker is ready only when AutoClip, FFmpeg, ffprobe, and the configured AI provider pass `autoclip doctor`. The dashboard reports the worker as ready only after the API receives `pipeline_ready=true`.
 
-The CLI securely prompts for the key. Other supported providers and a fully local Ollama option are documented in the [AutoClip README](https://github.com/artbyjazi/autoclip).
-
-Run `autoclip doctor` to verify Python, FFmpeg, dependencies, and provider readiness. Until the doctor check passes, the agent can appear online but will not claim rendering jobs.
-
-## What the agent does
-
-1. Registers and heartbeats to ClipForge over HTTPS.
-2. Claims a queued job only when the local AutoClip pipeline passes its readiness check.
-3. Downloads the source video from private R2 storage.
-4. Runs AutoClip locally to transcribe, select highlights, reframe to 9:16, and export captioned clips.
-5. Uploads each rendered MP4 to R2 in multipart chunks.
-6. Reports job progress and completion to the dashboard.
-
-The cloud control plane does not render videos. Cloud processing requires a separate machine/container running the same agent in cloud mode. Clip selection quality depends on the configured model and the source content.
-
-## Cloud worker with Docker
-
-A cloud worker is a separate Linux server or VPS. Cloudflare Pages/Workers do not render video.
-
-1. Install Docker Engine and Docker Compose on the server.
-2. Copy the `agent` folder to the server (do not commit or share `.env`).
-3. Create `.env` with `CLIPFORGE_API_URL` and the rotated `CLIPFORGE_AGENT_SECRET`.
-4. Build the image: `docker compose -f compose.yaml build`.
-5. Configure the provider once in the persistent AutoClip volume:
-
-```bash
-docker compose -f compose.yaml run --rm --entrypoint autoclip clipforge-cloud-agent config set-secret openai
-```
-
-6. Start the cloud worker: `docker compose -f compose.yaml up -d`.
-7. Check readiness: `docker compose -f compose.yaml logs -f`.
-
-The cloud worker uses CPU by default. Rendering speed depends on the server CPU/RAM and source length. VPS compute and storage are not unlimited or guaranteed free.
+Do not expose the worker's API secret in client-side code or public repositories.
