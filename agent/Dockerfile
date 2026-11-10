@@ -13,6 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+# This image is intended for a remote cloud server/container only.
+ENV CLIPFORGE_AGENT_MODE=cloud
 COPY requirements.txt .
 RUN python -m pip install --no-cache-dir --upgrade pip \
     && python -m pip install --no-cache-dir -r requirements.txt
