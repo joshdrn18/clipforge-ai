@@ -105,6 +105,17 @@ if not errorlevel 1 (
 )
 
 echo.
+echo Checking AutoClip engine, FFmpeg, and AI provider...
+".venv\Scripts\autoclip.exe" doctor
+if errorlevel 1 (
+  echo.
+  echo Renderer is not ready yet.
+  echo Run CONFIGURE-AI.bat to add an AI provider, then CHECK-CLIPFORGE.bat.
+  pause
+  exit /b 1
+)
+
+echo.
 echo [3/3] Starting ClipForge Local Agent...
 echo Keep this window open while the agent is connected.
 echo Press CTRL+C to stop the agent.
