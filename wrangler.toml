@@ -1,0 +1,12 @@
+name = "clipforge-ai"
+compatibility_date = "2026-11-10"
+pages_build_output_dir = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "clipforge-ai-db"
+database_id = "bcdcd8d5-979d-4dd0-8004-920e55227ebf"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "clipforge-ai-media"
