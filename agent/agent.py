@@ -157,11 +157,33 @@ def run_autoclip(job, source_path):
         ratio = "9:16"
     command = ["autoclip", "clip", str(source_path), "--ratio", ratio, "--max-clips", str(MAX_CLIPS)]
     print("Running:", " ".join(command))
-    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
-    if result.returncode != 0:
-        detail = (result.stderr or result.stdout or "AutoClip exited without an error message")[-2500:]
+    log_path = exports / f".clipforge-{uuid.uuid4().hex}.log"
+    try:
+        with log_path.open("w", encoding="utf-8", errors="replace") as log:
+            process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, text=True)
+            last_report = 0
+            while process.poll() is None:
+                time.sleep(10)
+                elapsed = int(time.time() - started)
+                if time.time() - last_report >= 30:
+                    try:
+                        set_progress(job["id"], 12, f"rendering_ai_clips_{elapsed // 60}m_{elapsed % 60}s")
+                    except Exception as progress_error:
+                        print(f"Progress update delayed: {progress_error}")
+                    last_report = time.time()
+            return_code = process.returncode
+        log_text = log_path.read_text(encoding="utf-8", errors="replace")
+    finally:
+        try:
+            log_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+    if return_code != 0:
+        detail = (log_text or "AutoClip exited without an error message")[-2500:]
         raise RuntimeError("AutoClip pipeline failed. Check its provider setup and FFmpeg installation. " + detail)
     candidates = [p for p in exports.rglob("*.mp4") if p.is_file() and p.resolve() not in before and p.stat().st_mtime >= started - 5]
+    if not candidates:
+        match = re.search(r"Exported to\\s+(.+)", log_text)
     if not candidates:
         match = re.search(r"Exported to\s+(.+)", result.stdout + "\n" + result.stderr)
         if match:
