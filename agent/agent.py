@@ -123,7 +123,7 @@ def upload_asset(job_id, path):
                     break
                 response = SESSION.post(
                     f"{BASE_URL}/api/agent/asset-part",
-                    params={"upload_id": upload_id, "key": key, "part_number": part_number},
+                    params={"agent_id": ID, "upload_id": upload_id, "key": key, "part_number": part_number},
                     data=chunk,
                     headers={"Authorization": f"Bearer {SECRET}", "Content-Type": "application/octet-stream"},
                     timeout=(30, 300),
