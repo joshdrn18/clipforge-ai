@@ -29,6 +29,7 @@ Cloudflare Workers are the control plane, not the video-rendering runtime. Heavy
 - [x] Dashboard clip library playback and downloads with HTTP byte-range seeking
 - [x] Failed-job retry with source-file verification and partial-output cleanup
 - [x] Queued-job cancellation and safe deletion of failed/cancelled jobs with R2 cleanup
+- [x] Agent-owned job claims, heartbeat lease refresh, and automatic recovery of jobs abandoned for more than 3 minutes
 - [x] 9:16, 16:9 and 1:1 output ratio selection
 - [x] Docker image and Compose template for a dedicated cloud agent
 - [ ] Cloud server provisioning and lifecycle management
