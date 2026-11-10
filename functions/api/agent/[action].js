@@ -16,7 +16,7 @@ export async function onRequest({ request, env, params }) {
   if (!authorized(request, env)) return json({ ok: false, error: "Unauthorized agent. Configure AGENT_SHARED_SECRET." }, 401);
   if (!env.DB) return json({ ok: false, error: "Database binding unavailable" }, 503);
   const action = String(params.action || "").toLowerCase();
-  const body = request.method === "POST" ? await readBody(request) : {};
+  const body = request.method === "POST" && action !== "asset-part" ? await readBody(request) : {};
   if (request.method !== "POST" || !body) return json({ ok: false, error: "POST with a JSON body is required." }, 400);
 
   try {
