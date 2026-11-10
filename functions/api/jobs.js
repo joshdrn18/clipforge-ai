@@ -26,8 +26,8 @@ export async function onRequestPost({ request, env }) {
       "INSERT INTO jobs (id, source_name, source_size, duration_seconds, processing_mode, status, progress, stage, settings_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'queued', 0, 'waiting_for_agent', ?, ?, ?)"
     ).bind(jobId, sourceName, size, duration, mode, JSON.stringify(body.settings || {}), now, now).run();
     await env.DB.prepare(
-      "INSERT INTO job_events (id, job_id, level, message, created_at) VALUES (?, ?, 'info', 'Job created; waiting for a connected processing agent.', ?)"
-    ).bind(id(), jobId, now).run();
+      "INSERT INTO job_events (job_id, level, message, created_at) VALUES (?, 'info', 'Job created; waiting for a connected processing agent.', ?)"
+    ).bind(jobId, now).run();
     return json({ ok: true, job: { id: jobId, source_name: sourceName, status: "queued", stage: "waiting_for_agent", processing_mode: mode, created_at: now } }, 201);
   } catch (error) { return json({ ok: false, error: "Could not create job", detail: error.message }, 500); }
 }
