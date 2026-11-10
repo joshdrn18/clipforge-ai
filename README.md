@@ -27,6 +27,8 @@ Cloudflare Workers are the control plane, not the video-rendering runtime. Heavy
 - [x] Local agent can claim jobs when AutoClip doctor passes
 - [x] Local agent runs AutoClip and uploads rendered MP4 assets to R2
 - [x] Dashboard clip library playback and downloads with HTTP byte-range seeking
+- [x] Failed-job retry with source-file verification and partial-output cleanup
+- [x] Queued-job cancellation and safe deletion of failed/cancelled jobs with R2 cleanup
 - [x] 9:16, 16:9 and 1:1 output ratio selection
 - [x] Docker image and Compose template for a dedicated cloud agent
 - [ ] Cloud server provisioning and lifecycle management
