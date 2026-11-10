@@ -1,7 +1,7 @@
 services:
   clipforge-cloud-agent:
     build: .
-    container_name: clipforge-cloud-agent
+    container_name: clipforge-cloud-worker
     restart: unless-stopped
     env_file:
       - .env
