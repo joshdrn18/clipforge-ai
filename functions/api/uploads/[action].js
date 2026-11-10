@@ -49,7 +49,7 @@ export async function onRequest({ request, env, params }) {
       const upload = env.MEDIA.resumeMultipartUpload(key, uploadId);
       const object = await upload.complete(normalized);
       const now = new Date().toISOString();
-      const updated = await env.DB.prepare("UPDATE jobs SET status='queued', progress=0, stage='waiting_for_agent', updated_at=? WHERE id=? AND source_key=?")
+      const updated = await env.DB.prepare("UPDATE jobs SET status='queued', progress=0, stage='waiting_for_cloud_worker', updated_at=? WHERE id=? AND source_key=?")
         .bind(now, jobId, key).run();
       if (!updated.meta?.changes) return json({ ok: false, error: "Upload finished but the job record could not be updated." }, 409);
       await env.DB.prepare("INSERT INTO job_events (job_id, level, message, created_at) VALUES (?, 'info', ?, ?)")
