@@ -18,9 +18,15 @@ Cloud-only AI video clipping workspace. The user's laptop is used only to open t
 - Jobs are always created in cloud mode.
 - The dashboard can be closed after the upload has completed; the remote worker continues independently.
 
+## Oracle Cloud Always Free target
+
+The first deployment target is an OCI Ampere A1 ARM64 VM, using only the published Always Free allowance. Do not upgrade the tenancy or create paid resources without the user's explicit approval.
+
+The worker image uses Python 3.12 and pins MediaPipe 0.10.18 because that release publishes Linux ARM64 wheels. MediaPipe 0.10.20/0.10.21 dropped those Linux ARM64 wheels, so leaving the dependency unpinned would make an ARM build fail. CTranslate2 publishes Linux AArch64 CPU wheels. The complete AutoClip dependency installation and real render still require a build/smoke test on the actual ARM VM before declaring compatibility.
+
 ## Remote cloud worker deployment
 
-The `agent/` directory contains the Docker image and Compose service for deployment to a Linux VPS or remote container host. Deploy it through that provider's Git integration or server-side container build. Do not install it on the user's laptop.
+The `agent/` directory contains the Docker image and Compose service for deployment to a Linux cloud server. Deploy it through the provider's server-side Git/container workflow. Do not install it on the user's laptop.
 
 Required environment variables on the remote server:
 
@@ -29,6 +35,8 @@ Required environment variables on the remote server:
 - `CLIPFORGE_AGENT_LABEL=ClipForge Cloud Worker`
 - `CLIPFORGE_AGENT_MODE=cloud`
 - `AUTOCLIP_HOME=/data/autoclip`
+
+The Compose file persists AutoClip cache/model state and worker identity in separate named volumes.
 
 Set the exact same newly rotated secret in Cloudflare Pages as `AGENT_SHARED_SECRET`. Never put this secret in frontend code, GitHub commits, screenshots, or public logs. The previous agent secret must be considered compromised and rotated before deployment.
 
