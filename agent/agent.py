@@ -55,8 +55,25 @@ def call(action, payload=None, method="POST", stream=False):
         raise RuntimeError(data.get("error", "Agent API rejected request"))
     return data
 
+_RENDERER_READY = None
+_RENDERER_DIAGNOSTIC = ""
+
 def renderer_ready():
-    return bool(shutil.which("autoclip") and shutil.which("ffmpeg") and shutil.which("ffprobe"))
+    global _RENDERER_READY, _RENDERER_DIAGNOSTIC
+    if _RENDERER_READY is not None:
+        return _RENDERER_READY
+    if not (shutil.which("autoclip") and shutil.which("ffmpeg") and shutil.which("ffprobe")):
+        _RENDERER_READY = False
+        _RENDERER_DIAGNOSTIC = "AutoClip, ffmpeg, or ffprobe is missing from PATH."
+        return False
+    try:
+        doctor = subprocess.run(["autoclip", "doctor"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+        _RENDERER_READY = doctor.returncode == 0
+        _RENDERER_DIAGNOSTIC = (doctor.stdout + "\\n" + doctor.stderr)[-2500:]
+    except Exception as exc:
+        _RENDERER_READY = False
+        _RENDERER_DIAGNOSTIC = str(exc)
+    return _RENDERER_READY
 
 def capabilities():
     return {
@@ -167,7 +184,9 @@ def main():
     call("register", {"agent_id": ID, "label": LABEL, "mode": MODE, "capabilities": caps})
     print(f"ClipForge agent connected: {LABEL} ({MODE})")
     if not caps["pipeline_ready"]:
-        print("Agent is online, but rendering is disabled until AutoClip + FFmpeg are installed.")
+        print("Agent is online, but rendering is disabled until AutoClip, full FFmpeg, and an AI provider pass 'autoclip doctor'.")
+        if _RENDERER_DIAGNOSTIC:
+            print(_RENDERER_DIAGNOSTIC)
     else:
         print("AutoClip renderer detected. Waiting for jobs.")
     stop_event = threading.Event()
